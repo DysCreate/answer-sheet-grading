@@ -3,9 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Upload Answer Sheet | Mark My Paper</title>
+    <link rel="stylesheet" href="/static/upload.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="logo">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Mark My Paper</span>
+                </div>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/login.html">Login</a>
+                    <a href="#" class="user-info">
+                        <i class="fas fa-user"></i>
+                        <span id="userName">Guest</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <div class="upload-container">
+                <div class="upload-header">
+                    <h1>Upload Answer Sheet</h1>
+                    <p>Upload your scanned answer sheet and let our AI do the grading</p>
+                </div>
+
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3>Drag & Drop your file here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" id="fileInput" accept="image/*,.pdf" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i>
+                            Choose File
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grading Criteria -->
+                <div class="grading-criteria">
+                    <h3>Grading Criteria</h3>
+                    <p>Add keywords and their weights for automated grading</p>
+                    
+                    <div class="criteria-container">
+                        <div class="criteria-inputs">
+                            <div class="input-group">
+                                <label>Keyword 1:</label>
+                                <input type="text" class="keyword-input" placeholder="Enter keyword">
+                                <input type="number" class="weight-input" placeholder="Weight" min="0" max="10" step="0.1" value="1">
+                            </div>
+                            <div class="input-group">
+                                <label>Keyword 2:</label>
+                                <input type="text" class="keyword-input" placeholder="Enter keyword">
+                                <input type="number" class="weight-input" placeholder="Weight" min="0" max="10" step="0.1" value="1">
+                            </div>
+                            <div class="input-group">
+                                <label>Keyword 3:</label>
+                                <input type="text" class="keyword-input" placeholder="Enter keyword">
+                                <input type="number" class="weight-input" placeholder="Weight" min="0" max="10" step="0.1" value="1">
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="addCriteria()">
+                            <i class="fas fa-plus"></i>
+                            Add More Criteria
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="upload-actions">
+                    <button class="btn btn-primary btn-large" onclick="uploadFile()" id="uploadBtn" disabled>
+                        <i class="fas fa-upload"></i>
+                        Upload & Grade
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <h3>Grading Results</h3>
+                    <div class="results-container">
+                        <div class="result-card">
+                            <div class="result-header">
+                                <i class="fas fa-file-alt"></i>
+                                <h4>Extracted Text</h4>
+                            </div>
+                            <div class="result-content">
+                                <p id="extractedText">No text extracted yet.</p>
+                            </div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-header">
+                                <i class="fas fa-star"></i>
+                                <h4>Score</h4>
+                            </div>
+                            <div class="result-content">
+                                <div class="score-display">
+                                    <span class="score" id="scoreDisplay">0</span>
+                                    <span class="score-label">points</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Section -->
+                <div class="loading-section" id="loadingSection" style="display: none;">
+                    <div class="loading-content">
+                        <div class="loading-spinner">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </div>
+                        <h3>Processing your answer sheet...</h3>
+                        <p>Our AI is analyzing the text and applying your grading criteria</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingSection = document.getElementById('loadingSection');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            // Show file name
+            const uploadContent = uploadArea.querySelector('.upload-content');
+            uploadContent.innerHTML = `
+                <div class="file-info">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>${file.name}</h3>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+            `;
+            uploadBtn.disabled = false;
+        }
+
+        function addCriteria() {
+            const container = document.querySelector('.criteria-inputs');
+            const newGroup = document.createElement('div');
+            newGroup.className = 'input-group';
+            newGroup.innerHTML = `
+                <label>Keyword ${container.children.length + 1}:</label>
+                <input type="text" class="keyword-input" placeholder="Enter keyword">
+                <input type="number" class="weight-input" placeholder="Weight" min="0" max="10" step="0.1" value="1">
+                <button type="button" class="remove-btn" onclick="removeCriteria(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.appendChild(newGroup);
+        }
+
+        function removeCriteria(button) {
+            button.parentElement.remove();
+            // Renumber the labels
+            const groups = document.querySelectorAll('.input-group');
+            groups.forEach((group, index) => {
+                const label = group.querySelector('label');
+                label.textContent = `Keyword ${index + 1}:`;
+            });
+        }
+
+        function uploadFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Show loading
+            loadingSection.style.display = 'block';
+            resultsSection.style.display = 'none';
+
+            // Get keywords and weights
+            const keywords = [];
+            const weights = [];
+            document.querySelectorAll('.keyword-input').forEach(input => {
+                if (input.value.trim()) {
+                    keywords.push(input.value.trim());
+                }
+            });
+            document.querySelectorAll('.weight-input').forEach((input, index) => {
+                if (index < keywords.length) {
+                    weights.push(parseFloat(input.value) || 1);
+                }
+            });
+
+            // Create FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            keywords.forEach(keyword => formData.append('keywords', keyword));
+            weights.forEach(weight => formData.append('weights', weight));
+
+            // Send to server
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingSection.style.display = 'none';
+                resultsSection.style.display = 'block';
+                
+                document.getElementById('extractedText').textContent = data.extracted_text || 'No text extracted';
+                document.getElementById('scoreDisplay').textContent = data.score || 0;
+            })
+            .catch(error => {
+                loadingSection.style.display = 'none';
+                alert('Error processing file: ' + error.message);
+            });
+        }
+
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetch('/api/user', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.user) {
+                    document.getElementById('userName').textContent = data.user.name;
+                }
+            })
+            .catch(error => {
+                console.log('User not logged in');
+            });
+        }
+    </script>
 </body>
-</html>
+</html> 
